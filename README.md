@@ -102,7 +102,6 @@ ignore the optional `costs` parameter.
 | Raw results, stats, figures | `benchmarks/results/` |
 | **Project report (PDF)** | `report/final_report.pdf` |
 | Baseline choice justification | `report/baseline_justification.md` |
-| Report generator (numbers come from the data) | `report/generate_report.py` |
 
 The `main` branch holds the unmodified GPTCache baseline; this branch
 (`feature/gdsf-eviction`) adds our work on top —
