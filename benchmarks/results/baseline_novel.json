@@ -1,0 +1,93 @@
+{
+  "config": {
+    "policies": "LRU,LFU,FIFO,RR",
+    "workload": "novel_long",
+    "maxsizes": "1000",
+    "requests": 20000,
+    "seed": 42,
+    "zipf_s": 1.1,
+    "clean_ratio": 0.2,
+    "base_ms": 300.0,
+    "ms_per_token": 20.0,
+    "hit_ms": 5.0,
+    "out": "results/baseline_novel"
+  },
+  "workload_params": {
+    "n_requests": 20000,
+    "seed": 42
+  },
+  "results": [
+    {
+      "policy": "LRU",
+      "maxsize": 1000,
+      "workload": "novel_long",
+      "n_requests": 20000,
+      "n_unique": 20000,
+      "hit_rate": 0.0,
+      "cost_weighted_hit_rate": 0.0,
+      "saved_tokens": 0.0,
+      "total_tokens": 40001145.68898987,
+      "latency_mean_ms": 40301.14568898993,
+      "latency_p50_ms": 40414.28448229325,
+      "latency_p95_ms": 58300.13620822818,
+      "latency_p99_ms": 59949.84649389934,
+      "evictions": 19000,
+      "harness_wall_s": 0.02782900002785027,
+      "harness_ops_per_s": 718674.7630164473
+    },
+    {
+      "policy": "LFU",
+      "maxsize": 1000,
+      "workload": "novel_long",
+      "n_requests": 20000,
+      "n_unique": 20000,
+      "hit_rate": 0.0,
+      "cost_weighted_hit_rate": 0.0,
+      "saved_tokens": 0.0,
+      "total_tokens": 40001145.68898987,
+      "latency_mean_ms": 40301.14568898993,
+      "latency_p50_ms": 40414.28448229325,
+      "latency_p95_ms": 58300.13620822818,
+      "latency_p99_ms": 59949.84649389934,
+      "evictions": 19000,
+      "harness_wall_s": 0.06380158301908523,
+      "harness_ops_per_s": 313471.8458947534
+    },
+    {
+      "policy": "FIFO",
+      "maxsize": 1000,
+      "workload": "novel_long",
+      "n_requests": 20000,
+      "n_unique": 20000,
+      "hit_rate": 0.0,
+      "cost_weighted_hit_rate": 0.0,
+      "saved_tokens": 0.0,
+      "total_tokens": 40001145.68898987,
+      "latency_mean_ms": 40301.14568898993,
+      "latency_p50_ms": 40414.28448229325,
+      "latency_p95_ms": 58300.13620822818,
+      "latency_p99_ms": 59949.84649389934,
+      "evictions": 19000,
+      "harness_wall_s": 0.02537262497935444,
+      "harness_ops_per_s": 788251.1177410254
+    },
+    {
+      "policy": "RR",
+      "maxsize": 1000,
+      "workload": "novel_long",
+      "n_requests": 20000,
+      "n_unique": 20000,
+      "hit_rate": 0.0,
+      "cost_weighted_hit_rate": 0.0,
+      "saved_tokens": 0.0,
+      "total_tokens": 40001145.68898987,
+      "latency_mean_ms": 40301.14568898993,
+      "latency_p50_ms": 40414.28448229325,
+      "latency_p95_ms": 58300.13620822818,
+      "latency_p99_ms": 59949.84649389934,
+      "evictions": 19000,
+      "harness_wall_s": 0.031183291925117373,
+      "harness_ops_per_s": 641369.103942823
+    }
+  ]
+}
