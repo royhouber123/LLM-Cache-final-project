@@ -10,8 +10,10 @@ FROM python:3.10-slim
 WORKDIR /app
 COPY . .
 
-# sqlalchemy + faiss-cpu are needed by the data-manager integration tests
-RUN pip install --no-cache-dir -e . numpy matplotlib pytest sqlalchemy faiss-cpu
+# sqlalchemy + faiss-cpu are needed by the data-manager integration tests.
+# cachetools is pinned because the LFU baseline's exact numbers depend on
+# its implementation details (GDSF and LRU are unaffected).
+RUN pip install --no-cache-dir -e . "cachetools==5.5.2" numpy matplotlib pytest sqlalchemy faiss-cpu
 
 WORKDIR /app
 

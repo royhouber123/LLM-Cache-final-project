@@ -5,6 +5,10 @@ the most popular open-source semantic cache for LLMs, with a cost-aware
 eviction policy (GDSF — Greedy-Dual-Size-Frequency), and show that it saves
 significantly more generation time and money than all four built-in policies.
 
+**Upstream contribution:** the policy and its data-manager integration are
+submitted to GPTCache as
+[zilliztech/GPTCache#689](https://github.com/zilliztech/GPTCache/pull/689).
+
 ## The idea in three sentences
 
 GPTCache's built-in eviction policies (LRU, LFU, FIFO, RR) treat every cached
@@ -22,8 +26,12 @@ significant (full details in the [report](report/final_report.pdf)):
 
 | GDSF vs. (cache size 1000) | tokens saved | mean latency | p95 latency |
 |---|---|---|---|
-| LRU (GPTCache default) | +6.8 pts | −26.4% | −27.4% |
-| LFU (strongest baseline) | +5.5 pts | −22.5% | −23.9% |
+| LRU (GPTCache default) | +5.5 pts | −26.4% | −27.4% |
+| LFU (strongest baseline) | +2.8 pts | −14.9% | −17.3% |
+
+The improvement survives real data: with real response lengths from the
+OASST1 dataset in place of the synthetic cost distribution, GDSF still beats
+every baseline on every metric at every cache size (report, Section 4.5).
 
 ![Cost-weighted hit rate vs cache size](benchmarks/results/figures/fig1_cost_weighted_vs_size.png)
 
@@ -33,11 +41,14 @@ Needs Python 3.10+. From the repository root:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e . numpy matplotlib pytest sqlalchemy faiss-cpu
+pip install -e . "cachetools==5.5.2" numpy matplotlib pytest sqlalchemy faiss-cpu
 ```
 
 (`sqlalchemy` and `faiss-cpu` are only needed for the data-manager
-integration tests; the policy itself and the benchmarks need neither.)
+integration tests; the policy itself and the benchmarks need neither.
+`cachetools` is pinned because the LFU baseline's exact numbers depend on
+its implementation details — GDSF and LRU give identical results across
+versions.)
 
 Or with Docker (also runs the tests):
 
