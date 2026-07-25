@@ -45,24 +45,34 @@ def zipf_workload(
     s: float = 1.1,
     cost_kind: str = "lognormal",
     seed: int = 42,
+    drift: bool = False,
 ) -> Workload:
     """Zipf-distributed prompt popularity (a few prompts are asked a lot,
     a long tail is asked rarely). This is the standard model for cache
     workloads. Costs are drawn independently of popularity, so popular
     prompts can be either cheap or expensive.
+
+    With ``drift=True`` the popularity ranking is re-shuffled halfway
+    through the stream: prompts that were hot in the first half become
+    unpopular and vice versa. Real traffic drifts like this (topics come
+    and go), and it is the situation aging mechanisms are designed for.
     """
     rng = np.random.default_rng(seed)
     ranks = np.arange(1, n_unique + 1)
     probs = 1.0 / ranks**s
     probs /= probs.sum()
     ids = rng.choice(n_unique, size=n_requests, p=probs)
+    if drift:
+        remap = rng.permutation(n_unique)
+        half = n_requests // 2
+        ids[half:] = remap[ids[half:]]
     costs = _make_costs(rng, n_unique, cost_kind)
     return Workload(
-        name=f"zipf_s{s}",
+        name=f"zipf_s{s}" + ("_drift" if drift else ""),
         requests=[(int(i), float(costs[i])) for i in ids],
         n_unique=n_unique,
         params={"n_requests": n_requests, "n_unique": n_unique, "s": s,
-                "cost_kind": cost_kind, "seed": seed},
+                "cost_kind": cost_kind, "seed": seed, "drift": drift},
     )
 
 

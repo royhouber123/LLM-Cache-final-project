@@ -35,8 +35,13 @@ from workloads import WORKLOADS, Workload
 
 def run_one(policy: str, maxsize: int, workload: Workload,
             clean_ratio: float, base_ms: float, ms_per_token: float,
-            hit_ms: float) -> dict:
-    """Replay one workload against one (policy, maxsize) configuration."""
+            hit_ms: float, eviction_factory=None,
+            return_latencies: bool = False) -> dict:
+    """Replay one workload against one (policy, maxsize) configuration.
+
+    ``eviction_factory`` lets callers (e.g. the ablation study) supply a
+    custom eviction object instead of the policies built into GPTCache.
+    """
     in_cache = set()  # ids currently cached (kept in sync by on_evict)
 
     def on_evict(keys):
@@ -44,9 +49,14 @@ def run_one(policy: str, maxsize: int, workload: Workload,
             in_cache.discard(k)
 
     clean_size = max(1, int(maxsize * clean_ratio))
-    cache = MemoryCacheEviction(
-        policy=policy, maxsize=maxsize, clean_size=clean_size, on_evict=on_evict
-    )
+    if eviction_factory is not None:
+        cache = eviction_factory(maxsize=maxsize, clean_size=clean_size,
+                                 on_evict=on_evict)
+    else:
+        cache = MemoryCacheEviction(
+            policy=policy, maxsize=maxsize, clean_size=clean_size,
+            on_evict=on_evict
+        )
     # Cost-aware policies accept a cost per entry; vanilla ones do not.
     put_takes_cost = "costs" in inspect.signature(cache.put).parameters
 
@@ -75,6 +85,8 @@ def run_one(policy: str, maxsize: int, workload: Workload,
     wall = time.perf_counter() - t0
 
     n = len(workload.requests)
+    if return_latencies:
+        return {"latencies": latencies, "policy": policy}
     return {
         "policy": policy,
         "maxsize": maxsize,
