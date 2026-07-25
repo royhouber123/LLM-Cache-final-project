@@ -1,4 +1,19 @@
 # GPTCache : A Library for Creating Semantic Cache for LLM Queries
+
+> **Course final project — cost-aware (GDSF) eviction policy.**
+> This fork adds a Greedy-Dual-Size-Frequency eviction policy
+> (`policy="GDSF"`) that keeps the cache entries that save the most
+> generation time and money, plus a reproducible benchmark suite.
+> Start here:
+> - [benchmarks/README.md](benchmarks/README.md) — install & run the benchmarks
+> - [report/final_report.pdf](report/final_report.pdf) — full project report
+> - [report/baseline_justification.md](report/baseline_justification.md) — why GPTCache
+> - `Dockerfile` — reproducible environment (`docker build -t gptcache-gdsf . && docker run --rm gptcache-gdsf`)
+>
+> Implementation: [gptcache/manager/eviction/gdsf.py](gptcache/manager/eviction/gdsf.py) ·
+> Tests: [tests/unit_tests/eviction/test_gdsf_cache.py](tests/unit_tests/eviction/test_gdsf_cache.py) ·
+> CI: [.github/workflows/gdsf_benchmark.yaml](.github/workflows/gdsf_benchmark.yaml)
+
 Slash Your LLM API Costs by 10x 💰, Boost Speed by 100x ⚡ 
 
 [![Release](https://img.shields.io/pypi/v/gptcache?label=Release&color&logo=Python)](https://pypi.org/project/gptcache/)

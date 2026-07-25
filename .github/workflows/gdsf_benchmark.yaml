@@ -1,0 +1,39 @@
+name: GDSF eviction tests & benchmark
+
+# Course project CI: every commit reruns the eviction unit tests and a
+# quick version of the benchmark suite, and uploads the result logs.
+on:
+  push:
+    branches: [feature/gdsf-eviction, main, dev]
+  pull_request:
+    paths:
+      - "gptcache/manager/eviction/**"
+      - "benchmarks/**"
+      - "tests/unit_tests/eviction/**"
+
+jobs:
+  test-and-bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install
+        run: pip install -e . numpy pytest
+      - name: Eviction unit tests
+        run: |
+          python -m pytest tests/unit_tests/eviction/ \
+            tests/unit_tests/manager/test_eviction.py \
+            -q -o addopts="" \
+            --ignore=tests/unit_tests/eviction/test_distributed_cache.py
+      - name: Quick benchmark (3 seeds, 20k requests)
+        working-directory: benchmarks
+        run: python run_experiments.py --seeds 3 --requests 20000 --out results/ci
+      - name: Upload benchmark logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmarks/results/ci_raw.csv
+            benchmarks/results/ci_summary.json
