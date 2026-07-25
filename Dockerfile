@@ -10,11 +10,13 @@ FROM python:3.10-slim
 WORKDIR /app
 COPY . .
 
-RUN pip install --no-cache-dir -e . numpy matplotlib pytest
+# sqlalchemy + faiss-cpu are needed by the data-manager integration tests
+RUN pip install --no-cache-dir -e . numpy matplotlib pytest sqlalchemy faiss-cpu
 
 WORKDIR /app
 
-# default: run the eviction unit tests (correctness first)
-CMD ["python", "-m", "pytest", "tests/unit_tests/eviction/", "-q", \
+# default: run all eviction unit + integration tests (correctness first)
+CMD ["python", "-m", "pytest", "tests/unit_tests/eviction/", \
+     "tests/unit_tests/manager/test_eviction.py", "-q", \
      "-o", "addopts=", \
      "--ignore=tests/unit_tests/eviction/test_distributed_cache.py"]

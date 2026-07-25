@@ -33,8 +33,11 @@ Needs Python 3.10+. From the repository root:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e . numpy matplotlib pytest
+pip install -e . numpy matplotlib pytest sqlalchemy faiss-cpu
 ```
+
+(`sqlalchemy` and `faiss-cpu` are only needed for the data-manager
+integration tests; the policy itself and the benchmarks need neither.)
 
 Or with Docker (also runs the tests):
 
@@ -50,9 +53,10 @@ python -m pytest tests/unit_tests/eviction/ tests/unit_tests/manager/test_evicti
     -q -o addopts="" --ignore=tests/unit_tests/eviction/test_distributed_cache.py
 ```
 
-19 tests: GPTCache's 8 original eviction tests (unchanged) plus 11 new ones
-covering the GDSF policy. The ignored file needs a running Redis server and is
-unrelated to in-memory eviction.
+20 tests: GPTCache's 8 original eviction tests (unchanged), 11 new ones
+covering the GDSF policy, and an end-to-end test showing the data manager
+feeds answer costs to GDSF. The ignored file needs a running Redis server and
+is unrelated to in-memory eviction.
 
 ## Running the benchmarks
 
@@ -78,6 +82,18 @@ benchmark on every commit
 ([workflow](.github/workflows/gdsf_benchmark.yaml)).
 
 ## Using the policy
+
+End-to-end, nothing else to configure — the data manager automatically uses
+each answer's length as its cost:
+
+```python
+from gptcache.manager import get_data_manager, CacheBase, VectorBase
+
+data_manager = get_data_manager(CacheBase("sqlite"), VectorBase("faiss", dimension=128),
+                                max_size=1000, clean_size=200, eviction="GDSF")
+```
+
+Or at the eviction-API level, with your own cost signal:
 
 ```python
 from gptcache.manager.eviction import EvictionBase
