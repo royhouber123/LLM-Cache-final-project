@@ -9,8 +9,10 @@ RR) against our new cost-aware policy (GDSF).
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e . numpy pytest
+pip install -e . numpy matplotlib pytest
 ```
+
+(`matplotlib` is only needed for `make_plots.py`.)
 
 ## Running a benchmark
 
@@ -38,6 +40,14 @@ We use three workload profiles (see `workloads.py`):
 - **novel_long** — every prompt is new, so the hit rate is 0% by
   construction. This measures the overhead the cache adds when it never
   helps.
+- **oasst** — same Zipf popularity, but the generation costs are real: for
+  each of 3,634 unique first-turn English prompts from the OASST1 dataset
+  (OpenAssistant/oasst1, Apache-2.0) we use the length of the actual
+  assistant reply (chars / 4 ≈ tokens) as its cost. The derived cost file
+  is committed at `data/oasst1_costs.csv`, so no download is needed. This
+  replaces the log-normal cost assumption with an empirical response-length
+  distribution. (OASST1 prompts are nearly all unique, so the popularity
+  pattern still has to be synthetic.)
 
 All workloads are generated with a fixed random seed (default 42, can be
 changed with `--seed`), so runs are fully deterministic.

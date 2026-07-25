@@ -132,7 +132,7 @@ def main():
     args = ap.parse_args()
 
     kwargs = {"n_requests": args.requests, "seed": args.seed}
-    if args.workload == "zipf":
+    if args.workload in ("zipf", "oasst"):
         kwargs["s"] = args.zipf_s
     workload = WORKLOADS[args.workload](**kwargs)
 

@@ -69,7 +69,8 @@ def agg(rows, experiment, metric, policies, key_field="maxsize",
     return out
 
 
-def line_panel(ax, data, policies, ylabel, legend_loc="lower right"):
+def line_panel(ax, data, policies, ylabel, legend_loc="lower right",
+               sizes=SIZES):
     for pol in policies:
         xs = list(data[pol].keys())
         means = np.array([data[pol][x][0] for x in xs])
@@ -82,8 +83,9 @@ def line_panel(ax, data, policies, ylabel, legend_loc="lower right"):
         ax.fill_between(xs, means - stds, means + stds,
                         color=st["color"], alpha=0.15, linewidth=0)
     ax.set_xscale("log")
-    ax.set_xticks(SIZES)
+    ax.set_xticks(sizes)
     ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
+    ax.get_xaxis().set_minor_formatter(plt.NullFormatter())
     ax.set_xlabel("cache size (entries)")
     ax.set_ylabel(ylabel)
     ax.legend(loc=legend_loc, fontsize=10)
@@ -231,7 +233,24 @@ def main():
     fig.savefig(os.path.join(args.outdir, "fig7_overhead.png"))
     plt.close(fig)
 
-    print(f"wrote 7 figures to {args.outdir}/")
+    # Fig 8: real response lengths (OASST1) - cost-weighted hit rate + p95
+    real_sizes = (250, 500, 1000, 2000)
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.4))
+    data = agg(rows, "E6_real_costs", "cost_weighted_hit_rate", main_pols)
+    line_panel(axes[0], data, main_pols,
+               "cost-weighted hit rate\n(fraction of tokens saved)",
+               sizes=real_sizes)
+    data = agg(rows, "E6_real_costs", "latency_p95_ms", main_pols)
+    line_panel(axes[1], data, main_pols, "p95 latency (ms)",
+               legend_loc="upper right", sizes=real_sizes)
+    axes[0].set_title("Tokens saved")
+    axes[1].set_title("p95 request latency")
+    fig.suptitle("Real response lengths: costs from OASST1 assistant replies "
+                 "(3,634 unique prompts, Zipf popularity)", y=1.02)
+    fig.savefig(os.path.join(args.outdir, "fig8_real_costs.png"))
+    plt.close(fig)
+
+    print(f"wrote 8 figures to {args.outdir}/")
 
 
 if __name__ == "__main__":

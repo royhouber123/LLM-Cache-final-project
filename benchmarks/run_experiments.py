@@ -11,6 +11,8 @@ Experiments:
   E3 ablation: LFU / COST_ONLY / GDSF_NO_AGE / GDSF at fixed sizes
   E4 overhead: novel_long workload (0% hits) - cache overhead & throughput
   E5 sanity  : repetitive_short workload - every policy must be ~100% hits
+  E6 real    : oasst workload (real OASST1 response lengths as costs),
+               cache-size sweep, same comparison as E1
 
 Usage:
   python benchmarks/run_experiments.py --seeds 10 --out benchmarks/results/full
@@ -24,7 +26,8 @@ import numpy as np
 
 from ablation import ABLATION_POLICIES
 from run_bench import run_one
-from workloads import novel_long_workload, repetitive_short_workload, zipf_workload
+from workloads import (novel_long_workload, oasst_workload,
+                       repetitive_short_workload, zipf_workload)
 
 LATENCY = {"base_ms": 300.0, "ms_per_token": 20.0, "hit_ms": 5.0}
 CLEAN_RATIO = 0.2
@@ -104,6 +107,15 @@ def main():
         for policy in ("LRU", "LFU", "FIFO", "RR", "GDSF"):
             record("E5_sanity", seed, run_config(policy, 1000, wl))
 
+    # ---- E6: real response lengths (OASST1) ------------------------------
+    print("E6: real-cost sweep (oasst, s=1.1)")
+    for seed in seeds:
+        wl = oasst_workload(n_requests=args.requests, s=1.1, seed=seed)
+        for maxsize in (250, 500, 1000, 2000):
+            for policy in ("LRU", "LFU", "FIFO", "RR", "GDSF"):
+                record("E6_real_costs", seed, run_config(policy, maxsize, wl))
+        print(f"  seed {seed} done")
+
     # ---- write raw CSV ---------------------------------------------------
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     header = list(rows[0].keys())
@@ -127,7 +139,7 @@ def main():
         return out
 
     for experiment in ("E1_size_sweep", "E2_skew_sweep", "E3_ablation",
-                       "E4_overhead", "E5_sanity"):
+                       "E4_overhead", "E5_sanity", "E6_real_costs"):
         agg = {}
         for (wl_name, maxsize, policy), rs in group(experiment).items():
             stats = {}
@@ -139,43 +151,49 @@ def main():
             agg[f"{wl_name}|{maxsize}|{policy}"] = stats
         summary[experiment] = agg
 
-    # paired GDSF-vs-baseline differences per seed (E1, maxsize=1000)
-    sig = {}
-    e1 = group("E1_size_sweep")
-    for baseline in ("LRU", "LFU"):
-        for metric, better in (("cost_weighted_hit_rate", "higher"),
-                               ("latency_mean_ms", "lower"),
-                               ("latency_p95_ms", "lower")):
-            for maxsize in (500, 1000, 2000):
-                key_g = [k for k in e1 if k[1] == maxsize and k[2] == "GDSF"]
-                key_b = [k for k in e1 if k[1] == maxsize and k[2] == baseline]
-                if not key_g or not key_b:
-                    continue
-                g = {r["seed"]: r[metric] for r in e1[key_g[0]]}
-                b = {r["seed"]: r[metric] for r in e1[key_b[0]]}
-                diffs = [g[s] - b[s] for s in sorted(g) if s in b]
-                lo, hi = bootstrap_ci(diffs)
-                rel = float(np.mean(diffs) / np.mean(list(b.values())))
-                sig[f"GDSF_vs_{baseline}|{metric}|maxsize={maxsize}"] = {
-                    "mean_diff": float(np.mean(diffs)),
-                    "relative_change": rel,
-                    "ci95": [lo, hi],
-                    "better_direction": better,
-                    "significant": (lo > 0 if better == "higher" else hi < 0),
-                    "n_seeds": len(diffs),
-                }
+    # paired GDSF-vs-baseline differences per seed
+    def significance(experiment):
+        sig = {}
+        grouped = group(experiment)
+        for baseline in ("LRU", "LFU"):
+            for metric, better in (("cost_weighted_hit_rate", "higher"),
+                                   ("latency_mean_ms", "lower"),
+                                   ("latency_p95_ms", "lower")):
+                for maxsize in (500, 1000, 2000):
+                    key_g = [k for k in grouped if k[1] == maxsize and k[2] == "GDSF"]
+                    key_b = [k for k in grouped if k[1] == maxsize and k[2] == baseline]
+                    if not key_g or not key_b:
+                        continue
+                    g = {r["seed"]: r[metric] for r in grouped[key_g[0]]}
+                    b = {r["seed"]: r[metric] for r in grouped[key_b[0]]}
+                    diffs = [g[s] - b[s] for s in sorted(g) if s in b]
+                    lo, hi = bootstrap_ci(diffs)
+                    rel = float(np.mean(diffs) / np.mean(list(b.values())))
+                    sig[f"GDSF_vs_{baseline}|{metric}|maxsize={maxsize}"] = {
+                        "mean_diff": float(np.mean(diffs)),
+                        "relative_change": rel,
+                        "ci95": [lo, hi],
+                        "better_direction": better,
+                        "significant": (lo > 0 if better == "higher" else hi < 0),
+                        "n_seeds": len(diffs),
+                    }
+        return sig
+
+    sig = significance("E1_size_sweep")
     summary["significance_E1"] = sig
+    summary["significance_E6"] = significance("E6_real_costs")
 
     with open(args.out + "_summary.json", "w") as f:
         json.dump({"config": vars(args), "latency_model": LATENCY,
                    "clean_ratio": CLEAN_RATIO, "summary": summary}, f, indent=2)
 
     print(f"\nwrote {args.out}_raw.csv and {args.out}_summary.json")
-    print("\n--- GDSF vs baselines (E1, paired over seeds, 95% bootstrap CI) ---")
-    for k, v in sig.items():
-        mark = "SIGNIFICANT" if v["significant"] else "not significant"
-        print(f"{k:<55} rel={v['relative_change']:+.1%}  "
-              f"CI=[{v['ci95'][0]:.4g}, {v['ci95'][1]:.4g}]  {mark}")
+    for exp, exp_sig in (("E1", sig), ("E6", summary["significance_E6"])):
+        print(f"\n--- GDSF vs baselines ({exp}, paired over seeds, 95% bootstrap CI) ---")
+        for k, v in exp_sig.items():
+            mark = "SIGNIFICANT" if v["significant"] else "not significant"
+            print(f"{k:<55} rel={v['relative_change']:+.1%}  "
+                  f"CI=[{v['ci95'][0]:.4g}, {v['ci95'][1]:.4g}]  {mark}")
 
 
 if __name__ == "__main__":

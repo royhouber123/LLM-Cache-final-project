@@ -108,8 +108,53 @@ def novel_long_workload(n_requests: int = 20_000, seed: int = 42) -> Workload:
     )
 
 
+def oasst_workload(
+    n_requests: int = 50_000,
+    s: float = 1.1,
+    seed: int = 42,
+    drift: bool = False,
+) -> Workload:
+    """Zipf popularity over real prompts with real generation costs.
+
+    The costs come from the OASST1 dataset (OpenAssistant/oasst1, Apache-2.0):
+    for every unique first-turn English prompt we take the length of the
+    actual assistant reply (chars / 4, roughly tokens). This replaces the
+    log-normal cost assumption of the synthetic workload with an empirical
+    response-length distribution. Popularity is still Zipf (OASST1 prompts
+    are nearly all unique, so the dataset has no usable repetition pattern),
+    and each seed assigns the popularity ranks to different prompts, so
+    popularity and cost stay independent like in the synthetic setup.
+    """
+    import os
+    data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             "data", "oasst1_costs.csv")
+    with open(data_path) as f:
+        costs = np.array([float(line) for line in f
+                          if line.strip() and not line.startswith("#")])
+    n_unique = len(costs)
+    rng = np.random.default_rng(seed)
+    # a different random prompt gets each popularity rank on every seed
+    costs = costs[rng.permutation(n_unique)]
+    ranks = np.arange(1, n_unique + 1)
+    probs = 1.0 / ranks**s
+    probs /= probs.sum()
+    ids = rng.choice(n_unique, size=n_requests, p=probs)
+    if drift:
+        remap = rng.permutation(n_unique)
+        half = n_requests // 2
+        ids[half:] = remap[ids[half:]]
+    return Workload(
+        name=f"oasst_s{s}" + ("_drift" if drift else ""),
+        requests=[(int(i), float(costs[i])) for i in ids],
+        n_unique=n_unique,
+        params={"n_requests": n_requests, "n_unique": n_unique, "s": s,
+                "cost_kind": "oasst1_real", "seed": seed, "drift": drift},
+    )
+
+
 WORKLOADS = {
     "zipf": zipf_workload,
     "repetitive_short": repetitive_short_workload,
     "novel_long": novel_long_workload,
+    "oasst": oasst_workload,
 }
